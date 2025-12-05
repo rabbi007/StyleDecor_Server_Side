@@ -1,25 +1,25 @@
-const express = require('express');             // Express-JS imported
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');    // Mongo-DB imported
-const cors = require('cors');                   // CORS imported
+const express = require('express');              // Express-JS imported 
+const { MongoClient, ServerApiVersion } = require('mongodb'); // Mongo-DB imported
+const cors = require('cors');                    // CORS imported
 
-const admin = require("firebase-admin");        // Firebase imported
-const serviceAccount = require("./firebase_service_key.json");   // Firebase service Account
+const admin = require("firebase-admin");         // Firebase imported
+const serviceAccount = require("./firebase_service_key.json"); // Firebase service Account
 
-require("dotenv").config();     // dot-env imported
-const app = express();          // express-js 
-const port = 3000;              // service port
+require("dotenv").config();                      // dot-env imported
+
+const app = express();                           // Express-JS 
+const port = 3000;                               // Service port
 
 // Initialize Firebase Admin SDK
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
 
-app.use(cors());                // enabled CORS
-app.use(express.json());        // enabled express-json
+app.use(cors());                                 // Enable CORS
+app.use(express.json());                         // Enable express-json
 
-// ******************************* Mongo-DB-Configuration-Start **********************
-
-const uri = process.env.MONGO_URI;      // get the URI info from .env file
+// MongoDB Configuration
+const uri = process.env.MONGO_URI;               // Get the URI from .env file
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -30,26 +30,26 @@ const client = new MongoClient(uri, {
   }
 });
 
+// MongoDB Collections
+const dbName = 'StyleDecor_DB';
+const UserCollection = client.db(dbName).collection('users');
+const ServiceCollection = client.db(dbName).collection('services');
+const DecoratorCollection = client.db(dbName).collection('decorators');
+const BookingCollection = client.db(dbName).collection('bookings');
+const PaymentCollection = client.db(dbName).collection('payments');
 
+// Connect to MongoDB and start the server
 async function run() {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
-    // await client.connect();
+    // Connect the client to the server
+    await client.connect();
+    console.log("MongoDB connection successful!");
 
-    const db = client.db('StyleDecor_DB')                     // mongo-bd database name
-    const UserCollection = db.collection('users')             // mongo-db collection name
-    const ServiceCollection = db.collection('services')       // mongo-db collection name
-    const DecoratorCollection = db.collection('decorators')   // mongo-db collection name
-    const BookingCollection = db.collection('bookings')       // mongo-db collection name
-    const PaymentCollection = db.collection('payments')       // mongo-db collection name
-
-    // const User_Count = await UserCollection.countDocuments();   // mongo-bd database count in total
-
-    // GET-API configured for: '/' (root)
+    // Root Route with Hyperlinks
     app.get('/', (req, res) => {
       res.status(200).send(`
-        <h1>Welcome to the Style-Decor API Server</h1>
-        <p>This is the API for the Style-Decor platform where you can manage users, services, decorators, bookings, and payments.</p>
+        <h1>Welcome to the StyleDecor API Server</h1>
+        <p>This is the API for the StyleDecor platform where you can manage users, services, decorators, bookings, and payments.</p>
         <h3>Available Endpoints:</h3>
         <ul>
             <li><a href="http://localhost:3000/users" target="_blank">GET /users - Fetch all users</a></li>
@@ -58,9 +58,10 @@ async function run() {
             <li><a href="http://localhost:3000/bookings" target="_blank">GET /bookings - Fetch all bookings</a></li>
             <li><a href="http://localhost:3000/payments" target="_blank">GET /payments - Fetch all payments</a></li>
         </ul>
-    `);
+      `);
     });
 
+    // Get All Users
     app.get('/users', async (req, res) => {
       try {
         const users = await UserCollection.find().toArray();
@@ -70,6 +71,30 @@ async function run() {
       }
     });
 
+    // Create a new user
+    app.post('/users', async (req, res) => {
+      const newUserData = req.body;  // Get data from the request body
+      try {
+        // Check if the user already exists
+        const existingUser = await UserCollection.findOne({ email: newUserData.email });
+        if (existingUser) {
+          return res.status(400).json({ message: 'User already exists' });
+        }
+
+        // Add createdAt and updatedAt fields
+        newUserData.createdAt = new Date();
+        newUserData.updatedAt = new Date();
+
+        // Insert new user data into MongoDB
+        const result = await UserCollection.insertOne(newUserData);
+        res.status(201).json({ message: 'User created successfully', user: result.ops[0] });
+      } catch (error) {
+        res.status(500).json({ message: 'Error creating user', error });
+      }
+    });
+
+
+    // Get All Services
     app.get('/services', async (req, res) => {
       try {
         const services = await ServiceCollection.find().toArray();
@@ -79,6 +104,7 @@ async function run() {
       }
     });
 
+    // Get All Decorators
     app.get('/decorators', async (req, res) => {
       try {
         const decorators = await DecoratorCollection.find().toArray();
@@ -88,6 +114,7 @@ async function run() {
       }
     });
 
+    // Get All Bookings
     app.get('/bookings', async (req, res) => {
       try {
         const bookings = await BookingCollection.find().toArray();
@@ -97,6 +124,7 @@ async function run() {
       }
     });
 
+    // Get All Payments
     app.get('/payments', async (req, res) => {
       try {
         const payments = await PaymentCollection.find().toArray();
@@ -106,37 +134,13 @@ async function run() {
       }
     });
 
-
-    // Create a new user from client-side
-    // app.post('/users', async (req, res) => {
-    //   const newUserData = req.body;
-    //   user.role = 'user';
-    //   user.createdAt = new Date();
-    //   const email = user.email;
-    //   const userExists = await UserCollection.findOne({ email });
-    //   if (userExists) {
-    //     return res.send({ message: 'This User Already Exist!' })
-    //   }
-    //   console.log('Receiving a Create-User-Query from Client-side:', newUserData)
-    //   const result = await UserCollection.insertOne(newUserData);
-    //   res.send(result);
-    // })
-
-
-    // Send a ping to confirm a successful connection
-    // await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
-  } finally {
-    // Ensures that the client will close when you finish/error
-    // await client.close();
-    console.log("Finally!!! You successfully connected to MongoDB!");
+    // Start Express Server
+    app.listen(port, () => {
+      console.log(`This app is listening on port: ${port}`);
+    });
+  } catch (error) {
+    console.error("MongoDB connection failed:", error);
   }
 }
 
-run().catch(console.dir);
-
-// ******************************* Mongo-DB-Configuration-End **********************
-
-app.listen(port, () => {
-  console.log(`This app is listening on port: ${port}`);
-});
+run().catch(console.error);
