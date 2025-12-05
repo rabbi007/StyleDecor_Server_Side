@@ -104,6 +104,23 @@ async function run() {
       }
     });
 
+    // Create a new service
+    app.post('/services', async (req, res) => {
+      const newServiceData = req.body;
+      try {
+        // Add createdAt and updatedAt fields
+        newServiceData.createdAt = new Date();
+        newServiceData.updatedAt = new Date();
+
+        // Insert new service data into MongoDB
+        const result = await ServiceCollection.insertOne(newServiceData);
+        res.status(201).json({ message: 'Service created successfully', service: result.ops[0] });
+      } catch (error) {
+        res.status(500).json({ message: 'Error creating service', error });
+      }
+    });
+
+
     // Get All Decorators
     app.get('/decorators', async (req, res) => {
       try {
