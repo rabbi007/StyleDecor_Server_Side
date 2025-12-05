@@ -199,8 +199,7 @@ async function run() {
         res.status(500).json({ message: 'Error recording payment', error });
       }
     });
-
-
+    
     // Start Express Server
     app.listen(port, () => {
       console.log(`This app is listening on port: ${port}`);
