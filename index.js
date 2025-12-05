@@ -61,6 +61,67 @@ async function run() {
     `);
     });
 
+    app.get('/users', async (req, res) => {
+      try {
+        const users = await UserCollection.find().toArray();
+        res.status(200).json(users);
+      } catch (error) {
+        res.status(500).json({ message: 'Error fetching users', error });
+      }
+    });
+
+    app.get('/services', async (req, res) => {
+      try {
+        const services = await ServiceCollection.find().toArray();
+        res.status(200).json(services);
+      } catch (error) {
+        res.status(500).json({ message: 'Error fetching services', error });
+      }
+    });
+
+    app.get('/decorators', async (req, res) => {
+      try {
+        const decorators = await DecoratorCollection.find().toArray();
+        res.status(200).json(decorators);
+      } catch (error) {
+        res.status(500).json({ message: 'Error fetching decorators', error });
+      }
+    });
+
+    app.get('/bookings', async (req, res) => {
+      try {
+        const bookings = await BookingCollection.find().toArray();
+        res.status(200).json(bookings);
+      } catch (error) {
+        res.status(500).json({ message: 'Error fetching bookings', error });
+      }
+    });
+
+    app.get('/payments', async (req, res) => {
+      try {
+        const payments = await PaymentCollection.find().toArray();
+        res.status(200).json(payments);
+      } catch (error) {
+        res.status(500).json({ message: 'Error fetching payments', error });
+      }
+    });
+
+
+    // Create a new user from client-side
+    // app.post('/users', async (req, res) => {
+    //   const newUserData = req.body;
+    //   user.role = 'user';
+    //   user.createdAt = new Date();
+    //   const email = user.email;
+    //   const userExists = await UserCollection.findOne({ email });
+    //   if (userExists) {
+    //     return res.send({ message: 'This User Already Exist!' })
+    //   }
+    //   console.log('Receiving a Create-User-Query from Client-side:', newUserData)
+    //   const result = await UserCollection.insertOne(newUserData);
+    //   res.send(result);
+    // })
+
 
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
