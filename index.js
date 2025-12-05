@@ -30,6 +30,44 @@ const client = new MongoClient(uri, {
   }
 });
 
+// ***********************Token-Verify*************************
+
+const verifyToken = async (req, res, next) => {
+    const authorization = req.headers.authorization;
+
+    if (!authorization) {
+        return res.status(401).send({
+            message: "Unauthorized Access! Authorized Token not found!!",
+        });
+    }
+
+    const token = authorization.split(" ")[1];
+
+    try {
+        // Verify and decode the Firebase token
+        const decoded = await admin.auth().verifyIdToken(token);
+
+        // Log the decoded email to the server console
+        console.log("Decoded Email: ", decoded.email);  // Log email here
+
+        // Attach the decoded information to the request object (including email)
+        req.user = {
+            uid: decoded.uid,
+            email: decoded.email || null,  // Get email from decoded token
+        };
+
+        // Proceed to the next middleware or route handler
+        next();
+    } catch (error) {
+        console.error("Token verification failed: ", error); // Log error if verification fails
+        return res.status(401).send({
+            message: "Unauthorized Access!!!",
+        });
+    }
+};
+
+// ***********************Token-Verify*************************
+
 // MongoDB Collections
 const dbName = 'StyleDecor_DB';
 const UserCollection = client.db(dbName).collection('users');
@@ -199,7 +237,7 @@ async function run() {
         res.status(500).json({ message: 'Error recording payment', error });
       }
     });
-    
+
     // Start Express Server
     app.listen(port, () => {
       console.log(`This app is listening on port: ${port}`);
