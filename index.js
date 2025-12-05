@@ -131,6 +131,23 @@ async function run() {
       }
     });
 
+    // Create a new decorator
+    app.post('/decorators', async (req, res) => {
+      const newDecoratorData = req.body;
+      try {
+        // Add createdAt and updatedAt fields
+        newDecoratorData.createdAt = new Date();
+        newDecoratorData.updatedAt = new Date();
+
+        // Insert new decorator data into MongoDB
+        const result = await DecoratorCollection.insertOne(newDecoratorData);
+        res.status(201).json({ message: 'Decorator created successfully', decorator: result.ops[0] });
+      } catch (error) {
+        res.status(500).json({ message: 'Error creating decorator', error });
+      }
+    });
+
+
     // Get All Bookings
     app.get('/bookings', async (req, res) => {
       try {
