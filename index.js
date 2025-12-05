@@ -158,6 +158,22 @@ async function run() {
       }
     });
 
+    // Create a new booking
+    app.post('/bookings', async (req, res) => {
+      const newBookingData = req.body;
+      try {
+        // Add createdAt and updatedAt fields
+        newBookingData.createdAt = new Date();
+        newBookingData.updatedAt = new Date();
+
+        // Insert new booking data into MongoDB
+        const result = await BookingCollection.insertOne(newBookingData);
+        res.status(201).json({ message: 'Booking created successfully', booking: result.ops[0] });
+      } catch (error) {
+        res.status(500).json({ message: 'Error creating booking', error });
+      }
+    });
+
     // Get All Payments
     app.get('/payments', async (req, res) => {
       try {
@@ -167,6 +183,23 @@ async function run() {
         res.status(500).json({ message: 'Error fetching payments', error });
       }
     });
+
+    // Create a new payment
+    app.post('/payments', async (req, res) => {
+      const newPaymentData = req.body;
+      try {
+        // Add createdAt and updatedAt fields
+        newPaymentData.createdAt = new Date();
+        newPaymentData.updatedAt = new Date();
+
+        // Insert new payment data into MongoDB
+        const result = await PaymentCollection.insertOne(newPaymentData);
+        res.status(201).json({ message: 'Payment recorded successfully', payment: result.ops[0] });
+      } catch (error) {
+        res.status(500).json({ message: 'Error recording payment', error });
+      }
+    });
+
 
     // Start Express Server
     app.listen(port, () => {
