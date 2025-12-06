@@ -131,7 +131,6 @@ async function run() {
       }
     });
 
-    // ================= USER ROLE & STATUS UPDATE ===================
     // Update an existing user by admin user
     app.patch("/users/:id", async (req, res) => {
       // const id = req.params.id;
@@ -149,7 +148,6 @@ async function run() {
         if (status) updateFields.status = status;
 
         const updateDoc = { $set: updateFields };
-
         const result = await UserCollection.updateOne(filter, updateDoc);
 
         if (result.modifiedCount === 1) {
@@ -173,8 +171,6 @@ async function run() {
         });
       }
     });
-
-
 
     // Get All Services
     app.get('/services', async (req, res) => {
