@@ -1,5 +1,5 @@
 const express = require('express');              // Express-JS imported 
-const { MongoClient, ServerApiVersion } = require('mongodb'); // Mongo-DB imported
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb'); // Mongo-DB imported
 const cors = require('cors');                    // CORS imported
 
 const admin = require("firebase-admin");         // Firebase imported
@@ -33,37 +33,37 @@ const client = new MongoClient(uri, {
 // ***********************Token-Verify*************************
 
 const verifyToken = async (req, res, next) => {
-    const authorization = req.headers.authorization;
+  const authorization = req.headers.authorization;
 
-    if (!authorization) {
-        return res.status(401).send({
-            message: "Unauthorized Access! Authorized Token not found!!",
-        });
-    }
+  if (!authorization) {
+    return res.status(401).send({
+      message: "Unauthorized Access! Authorized Token not found!!",
+    });
+  }
 
-    const token = authorization.split(" ")[1];
+  const token = authorization.split(" ")[1];
 
-    try {
-        // Verify and decode the Firebase token
-        const decoded = await admin.auth().verifyIdToken(token);
+  try {
+    // Verify and decode the Firebase token
+    const decoded = await admin.auth().verifyIdToken(token);
 
-        // Log the decoded email to the server console
-        console.log("Decoded Email: ", decoded.email);  // Log email here
+    // Log the decoded email to the server console
+    console.log("Decoded Email: ", decoded.email);  // Log email here
 
-        // Attach the decoded information to the request object (including email)
-        req.user = {
-            uid: decoded.uid,
-            email: decoded.email || null,  // Get email from decoded token
-        };
+    // Attach the decoded information to the request object (including email)
+    req.user = {
+      uid: decoded.uid,
+      email: decoded.email || null,  // Get email from decoded token
+    };
 
-        // Proceed to the next middleware or route handler
-        next();
-    } catch (error) {
-        console.error("Token verification failed: ", error); // Log error if verification fails
-        return res.status(401).send({
-            message: "Unauthorized Access!!!",
-        });
-    }
+    // Proceed to the next middleware or route handler
+    next();
+  } catch (error) {
+    console.error("Token verification failed: ", error); // Log error if verification fails
+    return res.status(401).send({
+      message: "Unauthorized Access!!!",
+    });
+  }
 };
 
 // ***********************Token-Verify*************************
@@ -90,11 +90,11 @@ async function run() {
         <p>This is the API for the StyleDecor platform where you can manage users, services, decorators, bookings, and payments.</p>
         <h3>Available Endpoints:</h3>
         <ul>
-            <li><a href="http://localhost:3000/users" target="_blank">GET /users - Fetch all users</a></li>
-            <li><a href="http://localhost:3000/services" target="_blank">GET /services - Fetch all services</a></li>
-            <li><a href="http://localhost:3000/decorators" target="_blank">GET /decorators - Fetch all decorators</a></li>
-            <li><a href="http://localhost:3000/bookings" target="_blank">GET /bookings - Fetch all bookings</a></li>
-            <li><a href="http://localhost:3000/payments" target="_blank">GET /payments - Fetch all payments</a></li>
+            <li><a href="https://style-decor-api-server.vercel.app/users" target="_blank">GET /users - Fetch all users</a></li>
+            <li><a href="https://style-decor-api-server.vercel.app/services" target="_blank">GET /services - Fetch all services</a></li>
+            <li><a href="https://style-decor-api-server.vercel.app/decorators" target="_blank">GET /decorators - Fetch all decorators</a></li>
+            <li><a href="https://style-decor-api-server.vercel.app/bookings" target="_blank">GET /bookings - Fetch all bookings</a></li>
+            <li><a href="https://style-decor-api-server.vercel.app/payments" target="_blank">GET /payments - Fetch all payments</a></li>
         </ul>
       `);
     });
@@ -125,11 +125,55 @@ async function run() {
 
         // Insert new user data into MongoDB
         const result = await UserCollection.insertOne(newUserData);
-        res.status(201).json({ message: 'User created successfully', user: result.ops[0] });
+        res.status(201).json({ message: 'User created successfully' });
       } catch (error) {
         res.status(500).json({ message: 'Error creating user', error });
       }
     });
+
+    // ================= USER ROLE & STATUS UPDATE ===================
+    // Update an existing user by admin user
+    app.patch("/users/:id", async (req, res) => {
+      // const id = req.params.id;
+      const { role, status } = req.body;
+      const serviceId = req.params.id;  // Extract the service ID from the URL
+      const objectId = new ObjectId(serviceId)
+
+      try {
+        // const filter = { _id: new ObjectId(id) };
+        const filter = ({ _id: objectId });
+        const updateFields = {};
+
+        // Only modify fields that were sent
+        if (role) updateFields.role = role;
+        if (status) updateFields.status = status;
+
+        const updateDoc = { $set: updateFields };
+
+        const result = await UserCollection.updateOne(filter, updateDoc);
+
+        if (result.modifiedCount === 1) {
+          return res.status(200).json({
+            success: true,
+            message: "User updated successfully",
+            updatedFields: updateFields,
+          });
+        } else {
+          return res.status(400).json({
+            success: false,
+            message: "User not updated. Invalid user ID or no changes applied.",
+          });
+        }
+      } catch (error) {
+        console.error("Error updating user:", error);
+        return res.status(500).json({
+          success: false,
+          message: "Server error while updating user",
+          error,
+        });
+      }
+    });
+
 
 
     // Get All Services
@@ -142,6 +186,30 @@ async function run() {
       }
     });
 
+    // Get a specific service by ID
+    app.get('/services/:id', async (req, res) => {
+      const serviceId = req.params.id;  // Extract the service ID from the URL
+      const objectId = new ObjectId(serviceId)
+
+      try {
+        // Find the service by ID in the MongoDB collection
+        const service = await ServiceCollection.findOne({ _id: objectId });
+
+        // If the service is not found, return a 404 error
+        if (!service) {
+          return res.status(404).json({ message: 'Service not found' });
+        }
+
+        // If the service is found, return the service data
+        res.status(200).json(service);
+      } catch (error) {
+        // If there's an error during the process, return a 500 error
+        console.error('Error fetching service:', error);
+        res.status(500).json({ message: 'Error fetching service', error });
+      }
+    });
+
+
     // Create a new service
     app.post('/services', async (req, res) => {
       const newServiceData = req.body;
@@ -152,7 +220,7 @@ async function run() {
 
         // Insert new service data into MongoDB
         const result = await ServiceCollection.insertOne(newServiceData);
-        res.status(201).json({ message: 'Service created successfully', service: result.ops[0] });
+        res.status(201).json({ message: 'Service created successfully' });
       } catch (error) {
         res.status(500).json({ message: 'Error creating service', error });
       }
@@ -179,7 +247,7 @@ async function run() {
 
         // Insert new decorator data into MongoDB
         const result = await DecoratorCollection.insertOne(newDecoratorData);
-        res.status(201).json({ message: 'Decorator created successfully', decorator: result.ops[0] });
+        res.status(201).json({ message: 'Decorator created successfully' });
       } catch (error) {
         res.status(500).json({ message: 'Error creating decorator', error });
       }
@@ -206,11 +274,33 @@ async function run() {
 
         // Insert new booking data into MongoDB
         const result = await BookingCollection.insertOne(newBookingData);
-        res.status(201).json({ message: 'Booking created successfully', booking: result.ops[0] });
+        res.status(201).json({ message: 'Booking created successfully' });
       } catch (error) {
         res.status(500).json({ message: 'Error creating booking', error });
       }
     });
+
+    // Update an old booking
+    app.patch("/bookings/:id", async (req, res) => {
+      const id = req.params.id;
+      const { status } = req.body;
+
+      try {
+        const result = await BookingCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { status: status } }
+        );
+
+        if (result.modifiedCount === 1) {
+          res.send({ success: true, message: "Booking cancelled successfully" });
+        } else {
+          res.status(400).send({ message: "Booking not found or not updated" });
+        }
+      } catch (error) {
+        res.status(500).send({ message: "Server error", error });
+      }
+    });
+
 
     // Get All Payments
     app.get('/payments', async (req, res) => {
@@ -232,7 +322,7 @@ async function run() {
 
         // Insert new payment data into MongoDB
         const result = await PaymentCollection.insertOne(newPaymentData);
-        res.status(201).json({ message: 'Payment recorded successfully', payment: result.ops[0] });
+        res.status(201).json({ message: 'Payment recorded successfully' });
       } catch (error) {
         res.status(500).json({ message: 'Error recording payment', error });
       }
