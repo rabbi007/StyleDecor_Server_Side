@@ -205,7 +205,6 @@ async function run() {
       }
     });
 
-
     // Create a new service
     app.post('/services', async (req, res) => {
       const newServiceData = req.body;
@@ -222,6 +221,35 @@ async function run() {
       }
     });
 
+    // Delete a new service
+    app.delete("/services/:id", async (req, res) => {
+      const id = req.params.id;
+
+      try {
+        const result = await ServiceCollection.deleteOne({
+          _id: new ObjectId(id)
+        });
+
+        if (result.deletedCount === 1) {
+          return res.status(200).json({
+            success: true,
+            message: "Service deleted successfully",
+          });
+        } else {
+          return res.status(404).json({
+            success: false,
+            message: "Service not found or already deleted",
+          });
+        }
+      } catch (error) {
+        console.error("Error deleting service:", error);
+        return res.status(500).json({
+          success: false,
+          message: "Server error while deleting service",
+          error,
+        });
+      }
+    });
 
     // Get All Decorators
     app.get('/decorators', async (req, res) => {
