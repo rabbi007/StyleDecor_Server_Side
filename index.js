@@ -221,6 +221,66 @@ async function run() {
       }
     });
 
+    // Update a new service
+    app.put("/services/:id", async (req, res) => {
+      const id = req.params.id;
+      const {
+        service_name,
+        cost,
+        unit,
+        service_category,
+        description,
+        image,
+        createdByEmail,
+      } = req.body;
+
+      try {
+        const filter = { _id: new ObjectId(id) };
+
+        const updateDoc = {
+          $set: {
+            service_name,
+            cost: Number(cost) || 0,
+            unit,
+            service_category,
+            description,
+            image,
+            // optional: track who last updated
+            updatedByEmail: createdByEmail || null,
+            updatedAt: new Date(),
+          },
+        };
+
+        const result = await ServiceCollection.updateOne(filter, updateDoc);
+
+        if (result.matchedCount === 0) {
+          return res.status(404).json({
+            success: false,
+            message: "Service not found",
+          });
+        }
+
+        if (result.modifiedCount === 0) {
+          return res.status(200).json({
+            success: true,
+            message: "No changes applied (data may be identical)",
+          });
+        }
+
+        res.status(200).json({
+          success: true,
+          message: "Service updated successfully",
+        });
+      } catch (error) {
+        console.error("Error updating service:", error);
+        res.status(500).json({
+          success: false,
+          message: "Failed to update service",
+          error,
+        });
+      }
+    });
+
     // Delete a new service
     app.delete("/services/:id", async (req, res) => {
       const id = req.params.id;
