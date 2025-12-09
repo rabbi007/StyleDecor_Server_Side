@@ -99,37 +99,100 @@ async function run() {
       `);
     });
 
-    // Get All Users
-    app.get('/users', async (req, res) => {
+    // // Get All Users
+    // app.get('/users', async (req, res) => {
+    //   try {
+    //     const users = await UserCollection.find().toArray();
+    //     res.status(200).json(users);
+    //   } catch (error) {
+    //     res.status(500).json({ message: 'Error fetching users', error });
+    //   }
+    // });
+
+    // ------------------------------------------------------
+
+    // GET USERS (OPTIONALLY FILTER BY ROLE & STATUS)
+    // Examples:
+    //   GET /users                              -> all users
+    //   GET /users?role=decorator               -> all decorators
+    //   GET /users?role=decorator&status=active -> active decorators
+    //   GET /users?role=user&status=active      -> active normal users
+
+    app.get("/users", async (req, res) => {
       try {
-        const users = await UserCollection.find().toArray();
+        const { role, status } = req.query;
+
+        const query = {};
+
+        if (role) {
+          query.role = role;       // "admin" | "decorator" | "user"
+        }
+
+        if (status) {
+          query.status = status;   // "active" | "disabled" | etc.
+        }
+
+        const users = await UserCollection.find(query)
+          .sort({ createdAt: -1 }) // optional: newest first
+          .toArray();
+
         res.status(200).json(users);
       } catch (error) {
-        res.status(500).json({ message: 'Error fetching users', error });
+        console.error("Error fetching users:", error);
+        res.status(500).json({ message: "Error fetching users", error });
       }
     });
 
-    // Create a new user
+
+    // CREATE A NEW USER 
     app.post('/users', async (req, res) => {
       const newUserData = req.body;  // Get data from the request body
       try {
         // Check if the user already exists
         const existingUser = await UserCollection.findOne({ email: newUserData.email });
         if (existingUser) {
-          return res.status(400).json({ message: 'User already exists' });
+          // Update lastLoggedIn & optionally update name/photo if changed
+          const updatedUser = await UserCollection.updateOne(
+            { email: newUserData.email },
+            {
+              $set: {
+                lastLoggedIn: new Date(),
+                name: newUserData.name || existingUser.name,
+                photoURL: newUserData.photoURL || existingUser.photoURL,
+                updatedAt: new Date(),
+              },
+            }
+          );
+          return res.status(200).json({
+            message: "Existing user logged in. lastLoggedIn updated.",
+          });
         }
 
-        // Add createdAt and updatedAt fields
-        newUserData.createdAt = new Date();
+        // Add-or-update: role, status, createdAt, updatedAt and lastLoggedIn fields
+        newUserData.role = "user", // default role
+          newUserData.status = "active",
+          newUserData.createdAt = new Date(),
+          newUserData.lastLoggedIn = new Date();
         newUserData.updatedAt = new Date();
 
         // Insert new user data into MongoDB
         const result = await UserCollection.insertOne(newUserData);
-        res.status(201).json({ message: 'User created successfully' });
+        res.status(201).json({ message: 'User created successfully!' });
       } catch (error) {
-        res.status(500).json({ message: 'Error creating user', error });
+        res.status(500).json({ message: 'Error creating user!!', error });
       }
     });
+
+    // GET USER'S ROLE INFO: /users/role?email
+    app.get('/users/role', verifyToken, async (req, res) => {
+      const user = await UserCollection.findOne(
+        { email: req.user?.email },          // use 'req.user.email' from verifyToken
+        { projection: { role: 1 } }
+      );
+
+      res.send({ role: user?.role || "user" });
+    });
+
 
     // Update an existing user by admin user
     app.patch("/users/:id", async (req, res) => {
@@ -337,16 +400,182 @@ async function run() {
       }
     });
 
+    // UPDATE AN EXISTING DECORATOR (ADMIN)
+    app.patch("/decorators/:id", async (req, res) => {
+      const decoratorId = req.params.id;
+      const {
+        name,
+        specialty,
+        rating,
+        profileImage,
+        availability, // expect array of days
+        status,       // 🔹 NEW: allow status update
+      } = req.body;
+
+      try {
+        const filter = { _id: new ObjectId(decoratorId) };
+        const updateFields = {};
+
+        if (name !== undefined) updateFields.name = name;
+        if (specialty !== undefined) updateFields.specialty = specialty;
+        if (rating !== undefined) updateFields.rating = Number(rating);
+        if (profileImage !== undefined) updateFields.profileImage = profileImage;
+        if (availability !== undefined) updateFields.availability = availability;
+        if (status !== undefined) updateFields.status = status; // 🔹 NEW
+
+        updateFields.updatedAt = new Date();
+
+        const updateDoc = { $set: updateFields };
+
+        const result = await DecoratorCollection.updateOne(filter, updateDoc);
+
+        if (result.matchedCount === 0) {
+          return res.status(404).json({
+            success: false,
+            message: "Decorator not found",
+          });
+        }
+
+        if (result.modifiedCount === 0) {
+          return res.status(200).json({
+            success: true,
+            message: "No changes applied (data may be identical)",
+          });
+        }
+
+        return res.status(200).json({
+          success: true,
+          message: "Decorator updated successfully",
+          updatedFields: updateFields,
+        });
+      } catch (error) {
+        console.error("Error updating decorator:", error);
+        return res.status(500).json({
+          success: false,
+          message: "Server error while updating decorator",
+          error,
+        });
+      }
+    });
+
+
+    // DELETE A DECORATOR (ADMIN)
+    app.delete("/decorators/:id", async (req, res) => {
+      const decoratorId = req.params.id;
+
+      // Optional: validate ObjectId
+      if (!ObjectId.isValid(decoratorId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid decorator ID",
+        });
+      }
+
+      try {
+        const filter = { _id: new ObjectId(decoratorId) };
+
+        const result = await DecoratorCollection.deleteOne(filter);
+
+        if (result.deletedCount === 0) {
+          return res.status(404).json({
+            success: false,
+            message: "Decorator not found",
+          });
+        }
+
+        return res.status(200).json({
+          success: true,
+          message: "Decorator deleted successfully",
+        });
+      } catch (error) {
+        console.error("Error deleting decorator:", error);
+        return res.status(500).json({
+          success: false,
+          message: "Server error while deleting decorator",
+          error,
+        });
+      }
+    });
+
+    // Top active decorators (for Home page)
+    app.get("/decorators/top", async (req, res) => {
+      try {
+        const topDecorators = await DecoratorCollection
+          .find({ status: "active" })
+          .sort({ rating: -1, createdAt: -1 }) // rating highest first
+          .toArray();
+        res.status(200).json(topDecorators);
+      } catch (error) {
+        res.status(500).json({ message: "Error fetching top decorators", error });
+      }
+    });
+
+    // GET SINGLE DECORATOR BY ID for DECORATOR-DETAILS
+    app.get("/decorators/:id", async (req, res) => {
+      const decoratorId = req.params.id;
+
+      if (!ObjectId.isValid(decoratorId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid decorator ID",
+        });
+      }
+
+      try {
+        const filter = { _id: new ObjectId(decoratorId) };
+        const decorator = await DecoratorCollection.findOne(filter);
+
+        if (!decorator) {
+          return res.status(404).json({
+            success: false,
+            message: "Decorator not found",
+          });
+        }
+
+        return res.status(200).json({
+          success: true,
+          data: decorator,
+        });
+      } catch (error) {
+        console.error("Error fetching decorator:", error);
+        return res.status(500).json({
+          success: false,
+          message: "Server error while fetching decorator",
+          error,
+        });
+      }
+    });
+
 
     // Get All Bookings
+    // app.get('/bookings', async (req, res) => {
+    //   try {
+    //     const bookings = await BookingCollection.find().toArray();
+    //     res.status(200).json(bookings);
+    //   } catch (error) {
+    //     res.status(500).json({ message: 'Error fetching bookings', error });
+    //   }
+    // });
+
+
+    // Get Bookings (optional: filter by userId)
     app.get('/bookings', async (req, res) => {
       try {
-        const bookings = await BookingCollection.find().toArray();
+        const { userId } = req.query; // read ?userId= email
+
+        let query = {};
+        if (userId) {
+          query.userId = userId;
+        }
+
+        const bookings = await BookingCollection.find(query).toArray();
+
         res.status(200).json(bookings);
       } catch (error) {
         res.status(500).json({ message: 'Error fetching bookings', error });
       }
     });
+
 
     // Create a new booking
     app.post('/bookings', async (req, res) => {
@@ -387,14 +616,33 @@ async function run() {
 
 
     // Get All Payments
+    // app.get('/payments', async (req, res) => {
+    //   try {
+    //     const payments = await PaymentCollection.find().toArray();
+    //     res.status(200).json(payments);
+    //   } catch (error) {
+    //     res.status(500).json({ message: 'Error fetching payments', error });
+    //   }
+    // });
+
+    // Get Payments (optional: filter by userId)
     app.get('/payments', async (req, res) => {
       try {
-        const payments = await PaymentCollection.find().toArray();
+        const { userId } = req.query; // Read ?userId= from URL
+
+        let query = {};
+        if (userId) {
+          query.userId = userId;
+        }
+
+        const payments = await PaymentCollection.find(query).toArray();
+
         res.status(200).json(payments);
       } catch (error) {
         res.status(500).json({ message: 'Error fetching payments', error });
       }
     });
+
 
     // Create a new payment
     app.post('/payments', async (req, res) => {
