@@ -4,3 +4,4 @@ firebase_service_key.json
 vercel.json
 .vercel
 .vscode
+seed.js

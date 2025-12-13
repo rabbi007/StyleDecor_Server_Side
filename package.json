@@ -5,6 +5,7 @@
     "express": "^5.1.0",
     "firebase": "^12.6.0",
     "firebase-admin": "^13.6.0",
-    "mongoose": "^9.0.0"
+    "mongoose": "^9.0.0",
+    "stripe": "^20.0.0"
   }
 }
