@@ -57,7 +57,7 @@ async function run() {
       },
       // Decorator sample (from your real data)
       {
-        name: "Lotus",
+        name: "Lotus Khandaker",
         email: "lotus@live.com",
         photoURL: "https://i.ibb.co/xSDFH4QH/DSC-0139.jpg",
         role: "user",
@@ -79,7 +79,7 @@ async function run() {
       }, 
 
       {
-        name: "Reza Khandaker",
+        name: "REZA FX Lighting",
         email: "reza@live.com",
         photoURL: "https://i.ibb.co/xSDFH4QH/DSC-0139.jpg",
         role: "decorator",
@@ -276,7 +276,7 @@ async function run() {
         createdAt: new Date("2025-11-25T08:45:00Z"),
         updatedAt: new Date("2025-11-27T13:10:00Z"),
         role: "decorator",
-        status: "disabled",
+        status: "active",
       },
       {
         userId: "decorator5@styledecor.com",
@@ -336,7 +336,7 @@ async function run() {
         createdAt: new Date("2025-12-05T14:22:00Z"),
         updatedAt: new Date("2025-12-06T12:00:00Z"),
         role: "decorator",
-        status: "disabled",
+        status: "active",
       },
       {
         userId: "decorator8@styledecor.com",
@@ -394,10 +394,10 @@ async function run() {
           "Thursday",
           "Friday",
         ],
-        "createdAt": "2024-11-15T09:30:00Z",
-        "updatedAt": "2025-12-09T10:05:00Z",
-        "role": "decorator",
-        "status": "active"
+        createdAt: "2024-11-15T09:30:00Z",
+        updatedAt: "2025-12-09T10:05:00Z",
+        role: "decorator",
+        status: "disable"
       },
 
       {
@@ -415,16 +415,15 @@ async function run() {
           "Thursday",
           "Friday",
         ],
-        "createdAt": "2025-05-20T14:55:00Z",
-        "updatedAt": "2025-11-30T11:22:00Z",
-        "role": "decorator",
-        "status": "active",
-        "earnings-summary": 50000
+        createdAt: "2025-05-20T14:55:00Z",
+        updatedAt: "2025-11-30T11:22:00Z",
+        role: "decorator",
+        status: "active"
       }
     ];
 
     const decoratorResult = await DecoratorCollection.insertMany(decorators);
-    console.log(`🎨 Inserted ${decoratorResult.insertedCount} decorators`);
+    console.log(`Inserted ${decoratorResult.insertedCount} decorators`);
 
     // --------------------------------------------------
     // 3️⃣ SERVICES (basic package samples)
@@ -556,7 +555,7 @@ async function run() {
 
 
     const serviceResult = await ServiceCollection.insertMany(services);
-    console.log(`🛎  Inserted ${serviceResult.insertedCount} services`);
+    console.log(`Inserted ${serviceResult.insertedCount} services`);
 
     // --------------------------------------------------
     // 4️⃣ BOOKINGS (sample bookings with status)
@@ -588,7 +587,7 @@ async function run() {
         bookingDate: new Date("2025-12-11"),
         eventLocation: "Mirpur, Dhaka",
         status: "pending",
-        paymentStatus: "paid",
+        paymentStatus: "unpaid",
         createdAt: new Date("2025-12-12"),
         updatedAt: new Date("2025-12-12"),
       },
@@ -601,50 +600,50 @@ async function run() {
         bookingDate: new Date("2025-12-12"),
         eventLocation: "Banani, Dhaka",
         status: "pending",
-        paymentStatus: "paid",
+        paymentStatus: "unpaid",
         createdAt: new Date("2025-12-12"),
         updatedAt: new Date("2025-12-12"),
       },
     ];
 
     const bookingResult = await BookingCollection.insertMany(bookings);
-    console.log(`📅 Inserted ${bookingResult.insertedCount} bookings`);
+    console.log(`Inserted ${bookingResult.insertedCount} bookings`);
 
     // --------------------------------------------------
     // 5️⃣ PAYMENTS (sample Stripe-like payments)
     // --------------------------------------------------
 
-    const bookingIds = Object.values(bookingResult.insertedIds);
+    // const bookingIds = Object.values(bookingResult.insertedIds);
 
-    const payments = [
-      {
-        bookingId: bookingIds[0],
-        userId: "tuba@live.com",
-        service_name: "Ambient Projection & Theme Lighting",
-        cost: 50000,
-        currency: "BDT",
-        status: "succeeded",
-        transactionId: "txn_50000_001",
-        method: "card",
-        createdAt: new Date("2025-12-05T10:20:00Z"),
-        updatedAt: new Date("2025-12-05T10:20:00Z"),
-      },
-      {
-        bookingId: bookingIds[2],
-        userId: "troyee@live.com",
-        service_name: "Ambient Projection & Theme Lighting",
-        cost: 40000,
-        currency: "BDT",
-        status: "succeeded",
-        transactionId: "txn_40000_002",
-        method: "Card",
-        createdAt: new Date("2025-12-02T09:10:00Z"),
-        updatedAt: new Date("2025-12-02T09:10:00Z"),
-      },
-    ];
+    // const payments = [
+    //   {
+    //     bookingId: bookingIds[0],
+    //     userId: "tuba@live.com",
+    //     service_name: "Ambient Projection & Theme Lighting",
+    //     cost: 50000,
+    //     currency: "BDT",
+    //     status: "succeeded",
+    //     transactionId: "txn_50000_001",
+    //     method: "card",
+    //     createdAt: new Date("2025-12-05T10:20:00Z"),
+    //     updatedAt: new Date("2025-12-05T10:20:00Z"),
+    //   },
+    //   {
+    //     bookingId: bookingIds[2],
+    //     userId: "troyee@live.com",
+    //     service_name: "Ambient Projection & Theme Lighting",
+    //     cost: 40000,
+    //     currency: "BDT",
+    //     status: "succeeded",
+    //     transactionId: "txn_40000_002",
+    //     method: "Card",
+    //     createdAt: new Date("2025-12-02T09:10:00Z"),
+    //     updatedAt: new Date("2025-12-02T09:10:00Z"),
+    //   },
+    // ];
 
-    const paymentResult = await PaymentCollection.insertMany(payments);
-    console.log(`💳 Inserted ${paymentResult.insertedCount} payments`);
+    // const paymentResult = await PaymentCollection.insertMany(payments);
+    // console.log(`💳 Inserted ${paymentResult.insertedCount} payments`);
 
     console.log("✅ Seeding completed successfully!");
   } catch (error) {

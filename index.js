@@ -1,10 +1,6 @@
 const express = require('express');              // Express-JS imported 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb'); // Mongo-DB imported
 const cors = require('cors');                    // CORS imported
-// const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY); // stripe imported with Secret Key
-
-const stripe = require("stripe")("sk_test_51Sd7KqCfmI2xjvINsO2Ef5ZfsCuUXiQF9y9U53TP02EjDAtXueCNZ9dsHTcAOIH9V5NNLLd5hhkwj1er9l6FuIrm00wpIN4Usx"); // stripe imported with Secret Key
-
 
 const admin = require("firebase-admin");         // Firebase imported
 const serviceAccount = require("./firebase_service_key.json"); // Firebase service Account
@@ -34,6 +30,9 @@ const client = new MongoClient(uri, {
   }
 });
 
+// const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY); // stripe imported with Secret Key
+const stripe = require("stripe")("sk_test_51Sd7KqCfmI2xjvINsO2Ef5ZfsCuUXiQF9y9U53TP02EjDAtXueCNZ9dsHTcAOIH9V5NNLLd5hhkwj1er9l6FuIrm00wpIN4Usx"); // stripe imported with Secret Key
+
 // ***********************Token-Verify*************************
 
 const verifyToken = async (req, res, next) => {
@@ -53,7 +52,7 @@ const verifyToken = async (req, res, next) => {
 
     // Log the decoded email to the server console
     console.log("Decoded Email: ", decoded.email);  // Log email here
-
+    const tokenEmail = decoded.email
     // Attach the decoded information to the request object (including email)
     req.user = {
       uid: decoded.uid,
@@ -88,7 +87,7 @@ async function run() {
     console.log("MongoDB connection successful!");
 
     // Root Route with Hyperlinks
-    app.get('/', (req, res) => {
+    app.get('/',verifyToken, (req, res) => {
       res.status(200).send(`
         <h1>Welcome to the StyleDecor API Server</h1>
         <p>This is the API for the StyleDecor platform where you can manage users, services, decorators, bookings, and payments.</p>
@@ -189,7 +188,7 @@ async function run() {
     // GET USER'S ROLE INFO: /users/role?email
     app.get('/users/role', verifyToken, async (req, res) => {
       const user = await UserCollection.findOne(
-        { email: req.user?.email },          // use 'req.user.email' from verifyToken
+        { email: req.user?.email },  // use 'req.user.email' from verifyToken
         { projection: { role: 1 } }
       );
 
@@ -680,6 +679,7 @@ async function run() {
       }
     });
 
+
     // Update an existing booking (status, payment, decorator assignment, etc.)
     app.patch("/bookings/:id", async (req, res) => {
       const id = req.params.id;
@@ -705,11 +705,8 @@ async function run() {
         if (paymentStatus) updateFields.paymentStatus = paymentStatus;
 
         // Decorator assignment
-        if (assignedDecoratorId)
-          updateFields.assignedDecoratorId = assignedDecoratorId;
-
-        if (assignedDecoratorName)
-          updateFields.assignedDecoratorName = assignedDecoratorName;
+        if (assignedDecoratorId) updateFields.assignedDecoratorId = assignedDecoratorId;
+        if (assignedDecoratorName) updateFields.assignedDecoratorName = assignedDecoratorName;
 
         // Payment info
         if (transactionId) updateFields.transactionId = transactionId;
@@ -736,6 +733,12 @@ async function run() {
           });
         }
 
+        if (result.modifiedCount === 0) {
+          return res.status(400).send({
+            message: "No changes were applied. The data might be the same.",
+          });
+        }
+
         res.send({
           success: true,
           message: "Booking updated successfully",
@@ -746,51 +749,6 @@ async function run() {
         res.status(500).send({ message: "Server error", error });
       }
     });
-
-
-
-    // Update an existing booking (status, decorator assignment, etc.)
-    // app.patch("/bookings/:id", async (req, res) => {
-    //   const id = req.params.id;
-
-    //   try {
-    //     const filter = { _id: new ObjectId(id) };
-
-    //     // Build dynamic $set payload
-    //     const updateFields = {};
-    //     const { status, assignedDecoratorId, assignedDecoratorName } = req.body;
-
-    //     if (status) updateFields.status = status;
-    //     if (assignedDecoratorId) updateFields.assignedDecoratorId = assignedDecoratorId;
-    //     if (assignedDecoratorName) updateFields.assignedDecoratorName = assignedDecoratorName;
-
-    //     // If no valid fields to update
-    //     if (Object.keys(updateFields).length === 0) {
-    //       return res
-    //         .status(400)
-    //         .send({ message: "No valid fields provided for update" });
-    //     }
-
-    //     const result = await BookingCollection.updateOne(filter, {
-    //       $set: updateFields,
-    //     });
-
-    //     if (result.modifiedCount === 1) {
-    //       res.send({
-    //         success: true,
-    //         message: "Booking updated successfully",
-    //         updatedFields: updateFields,
-    //       });
-    //     } else {
-    //       res
-    //         .status(400)
-    //         .send({ message: "Booking not found or no changes applied" });
-    //     }
-    //   } catch (error) {
-    //     console.error("Error updating booking:", error);
-    //     res.status(500).send({ message: "Server error", error });
-    //   }
-    // });
 
 
     // Get a specific booking by ID
@@ -848,25 +806,8 @@ async function run() {
       }
     });
 
-    //   // Create a new payment
-    // app.post('/payments', async (req, res) => {
-    //   const newPaymentData = req.body;
-    //   try {
-    //     // Add createdAt and updatedAt fields
-    //     newPaymentData.createdAt = new Date();
-    //     newPaymentData.updatedAt = new Date();
 
-    //     // Insert new payment data into MongoDB
-    //     const result = await PaymentCollection.insertOne(newPaymentData);
-    //     res.status(201).json({ message: 'Payment recorded successfully' });
-    //   } catch (error) {
-    //     res.status(500).json({ message: 'Error recording payment', error });
-    //   }
-    // });
-
-    // ===============================================================================
-
-    // Handle the payment
+    // Create a new payment
     app.post("/payments", async (req, res) => {
       const { paymentMethodId, amount } = req.body;
 
@@ -906,10 +847,6 @@ async function run() {
         res.status(500).send({ message: error.message });
       }
     });
-
-
-
-    // ===============================================================================
 
 
     // Start Express Server
