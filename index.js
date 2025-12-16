@@ -87,7 +87,7 @@ async function run() {
     console.log("MongoDB connection successful!");
 
     // Root Route with Hyperlinks
-    app.get('/',verifyToken, (req, res) => {
+    app.get('/', verifyToken, (req, res) => {
       res.status(200).send(`
         <h1>Welcome to the StyleDecor API Server</h1>
         <p>This is the API for the StyleDecor platform where you can manage users, services, decorators, bookings, and payments.</p>
@@ -679,8 +679,7 @@ async function run() {
       }
     });
 
-
-    // Update an existing booking (status, payment, decorator assignment, etc.)
+    // Update an existing booking (status, payment, decorator assignment/clear, etc.)
     app.patch("/bookings/:id", async (req, res) => {
       const id = req.params.id;
 
@@ -704,9 +703,18 @@ async function run() {
         // Payment lifecycle
         if (paymentStatus) updateFields.paymentStatus = paymentStatus;
 
-        // Decorator assignment
-        if (assignedDecoratorId) updateFields.assignedDecoratorId = assignedDecoratorId;
-        if (assignedDecoratorName) updateFields.assignedDecoratorName = assignedDecoratorName;
+        // Decorator assignment: Clear field if assignedDecoratorId or assignedDecoratorName is empty or null
+        if (assignedDecoratorId === "" || assignedDecoratorId === null) {
+          updateFields.assignedDecoratorId = null;  // Clear decoratorId field
+        } else if (assignedDecoratorId) {
+          updateFields.assignedDecoratorId = assignedDecoratorId; // Update decoratorId
+        }
+
+        if (assignedDecoratorName === "" || assignedDecoratorName === null) {
+          updateFields.assignedDecoratorName = null;  // Clear decoratorName field
+        } else if (assignedDecoratorName) {
+          updateFields.assignedDecoratorName = assignedDecoratorName; // Update decoratorName
+        }
 
         // Payment info
         if (transactionId) updateFields.transactionId = transactionId;
@@ -749,6 +757,78 @@ async function run() {
         res.status(500).send({ message: "Server error", error });
       }
     });
+
+
+
+    // // Update an existing booking (status, payment, decorator assignment, etc.)
+    // app.patch("/bookings/:id", async (req, res) => {
+    //   const id = req.params.id;
+
+    //   try {
+    //     const filter = { _id: new ObjectId(id) };
+
+    //     const updateFields = {};
+    //     const {
+    //       status,               // booking status
+    //       paymentStatus,        // payment Status
+    //       assignedDecoratorId,
+    //       assignedDecoratorName,
+    //       transactionId,
+    //       paidAt,
+    //       paymentMethod,
+    //     } = req.body;
+
+    //     // Booking lifecycle
+    //     if (status) updateFields.status = status;
+
+    //     // Payment lifecycle
+    //     if (paymentStatus) updateFields.paymentStatus = paymentStatus;
+
+    //     // Decorator assignment
+    //     if (assignedDecoratorId) updateFields.assignedDecoratorId = assignedDecoratorId;
+    //     if (assignedDecoratorName) updateFields.assignedDecoratorName = assignedDecoratorName;
+
+    //     // Payment info
+    //     if (transactionId) updateFields.transactionId = transactionId;
+    //     if (paidAt) updateFields.paidAt = paidAt;
+    //     if (paymentMethod) updateFields.paymentMethod = paymentMethod;
+
+    //     // Always update updatedAt
+    //     updateFields.updatedAt = new Date();
+
+    //     if (Object.keys(updateFields).length === 0) {
+    //       return res.status(400).send({
+    //         message: "No valid fields provided for update",
+    //       });
+    //     }
+
+    //     const result = await BookingCollection.updateOne(
+    //       filter,
+    //       { $set: updateFields }
+    //     );
+
+    //     if (result.matchedCount === 0) {
+    //       return res.status(404).send({
+    //         message: "Booking not found",
+    //       });
+    //     }
+
+    //     if (result.modifiedCount === 0) {
+    //       return res.status(400).send({
+    //         message: "No changes were applied. The data might be the same.",
+    //       });
+    //     }
+
+    //     res.send({
+    //       success: true,
+    //       message: "Booking updated successfully",
+    //       updatedFields: updateFields,
+    //     });
+    //   } catch (error) {
+    //     console.error("Error updating booking:", error);
+    //     res.status(500).send({ message: "Server error", error });
+    //   }
+    // });
 
 
     // Get a specific booking by ID

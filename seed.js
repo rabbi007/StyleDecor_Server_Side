@@ -397,7 +397,7 @@ async function run() {
         createdAt: "2024-11-15T09:30:00Z",
         updatedAt: "2025-12-09T10:05:00Z",
         role: "decorator",
-        status: "disable"
+        status: "disabled"
       },
 
       {
